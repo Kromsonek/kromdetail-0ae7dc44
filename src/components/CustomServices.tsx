@@ -8,7 +8,7 @@ import { usePromotions } from "@/hooks/usePromotions";
 
 type Service = { id: string; name: string; description: string | null; price: number };
 
-const MIN_ORDER = 199;
+const MIN_ORDER = 49;
 
 export function CustomServices() {
   const [services, setServices] = useState<Service[]>([]);
@@ -25,12 +25,13 @@ export function CustomServices() {
   const priceOf = (s: Service) => apply("service", s.id, Number(s.price));
   const selectedList = services.filter((s) => selected[s.id]);
   const sum = selectedList.reduce((a, b) => a + priceOf(b).final, 0);
+  const sumOriginal = selectedList.reduce((a, b) => a + Number(b.price), 0);
   const discount = selectedList.length >= 3 ? sum * 0.1 : 0;
   const total = sum - discount;
 
   const addAll = () => {
-    if (total < MIN_ORDER) {
-      toast.error(`Minimalna wartość zamówienia to ${MIN_ORDER} zł`);
+    if (sumOriginal < MIN_ORDER) {
+      toast.error(`Minimalna wartość zamówienia to ${MIN_ORDER} zł (przed promocjami)`);
       return;
     }
     selectedList.forEach((s) => {
@@ -84,8 +85,8 @@ export function CustomServices() {
             {discount > 0 && <div className="flex justify-between text-[color:var(--gold)]"><span>Rabat -10%</span><span>-{discount.toFixed(0)} zł</span></div>}
             <div className="border-t pt-3 mt-3 flex justify-between font-display text-2xl"><span>Razem</span><span>{total.toFixed(0)} zł</span></div>
           </div>
-          {total > 0 && total < MIN_ORDER && (
-            <p className="mt-3 text-xs text-destructive">Minimum {MIN_ORDER} zł — dobierz jeszcze {(MIN_ORDER - total).toFixed(0)} zł</p>
+          {sumOriginal > 0 && sumOriginal < MIN_ORDER && (
+            <p className="mt-3 text-xs text-destructive">Minimum {MIN_ORDER} zł (przed promocjami) — dobierz jeszcze {(MIN_ORDER - sumOriginal).toFixed(0)} zł</p>
           )}
           <Button onClick={addAll} disabled={selectedList.length === 0} className="mt-5 w-full h-12 btn-gold">
             Dodaj do koszyka
