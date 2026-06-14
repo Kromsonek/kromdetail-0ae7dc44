@@ -6,7 +6,9 @@ export function Hero() {
     <section className="relative w-full overflow-hidden">
       <div className="relative h-[88vh] min-h-[560px] w-full">
         <img src={heroImg} alt="Czarne auto premium po detailingu" className="absolute inset-0 h-full w-full object-cover" width={1920} height={1080} />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/55 to-black/85" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/80" />
+        {/* Smooth gradient transition into page background (works in light & dark) */}
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-background pointer-events-none" />
         <div className="relative z-10 container mx-auto h-full flex flex-col justify-center px-4">
           <p className="text-[color:var(--gold)] uppercase tracking-[0.25em] text-xs mb-4">KromDetail • Premium Mobile Detailing</p>
           <h1 className="font-display text-5xl md:text-7xl font-semibold text-white max-w-4xl leading-[1.05]">
