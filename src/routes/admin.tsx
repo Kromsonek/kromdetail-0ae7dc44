@@ -558,6 +558,85 @@ function AdminPage() {
         </div>
 
         <div className="flex items-center gap-2 mt-12 mb-6">
+          <Ticket className="h-5 w-5 text-[color:var(--gold)]" />
+          <h2 className="font-display text-3xl">Kody rabatowe</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Kod ma format <span className="font-mono">KROM-XXXX-XXXX-XXXX</span> i jest generowany losowo. Klient wpisuje go w koszyku.
+        </p>
+
+        <form onSubmit={createDiscountCode} className="rounded-2xl border bg-card p-6 mb-8 space-y-4">
+          <h3 className="font-semibold">Wygeneruj nowy kod</h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Typ rabatu</Label>
+              <Select value={dcType} onValueChange={(v) => setDcType(v as "percent" | "amount")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percent">Procent (%)</SelectItem>
+                  <SelectItem value="amount">Kwota (zł)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Wartość {dcType === "percent" ? "(%)" : "(zł)"}</Label>
+              <Input type="number" min={1} value={dcValue} onChange={(e) => setDcValue(Number(e.target.value))} required />
+            </div>
+            <div>
+              <Label>Limit użyć (puste = bez limitu)</Label>
+              <Input type="number" min={1} value={dcMaxUses} onChange={(e) => setDcMaxUses(e.target.value)} placeholder="np. 50" />
+            </div>
+            <div>
+              <Label>Data wygaśnięcia (opcjonalnie)</Label>
+              <Input type="datetime-local" value={dcExpires} onChange={(e) => setDcExpires(e.target.value)} />
+            </div>
+          </div>
+          <Button type="submit" disabled={dcSaving} className="btn-gold h-11">
+            {dcSaving ? "Generowanie..." : "Wygeneruj kod"}
+          </Button>
+        </form>
+
+        <div className="space-y-3 mb-12">
+          <h3 className="font-semibold">Aktualne kody ({codes.length})</h3>
+          {codes.length === 0 && (
+            <p className="text-sm text-muted-foreground">Brak kodów. Wygeneruj pierwszy powyżej.</p>
+          )}
+          {codes.map((c) => {
+            const exhausted = c.max_uses != null && c.uses_count >= c.max_uses;
+            const expired = c.expires_at && new Date(c.expires_at) < new Date();
+            return (
+              <div key={c.id} className="rounded-xl border bg-card p-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex-1 min-w-[220px]">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button type="button" onClick={() => copyCode(c.code)} className="font-mono font-semibold inline-flex items-center gap-1 hover:text-[color:var(--gold)]">
+                      {c.code} <Copy className="h-3 w-3 opacity-60" />
+                    </button>
+                    <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-destructive text-destructive-foreground">
+                      {c.discount_type === "percent" ? `-${Number(c.discount_value)}%` : `-${Number(c.discount_value)} zł`}
+                    </span>
+                    {!c.is_active && <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">Wyłączony</span>}
+                    {expired && <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">Wygasł</span>}
+                    {exhausted && <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">Wyczerpany</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Użyć: {c.uses_count}{c.max_uses != null ? ` / ${c.max_uses}` : " / ∞"}
+                    {c.expires_at && <> · ważny do {new Date(c.expires_at).toLocaleString("pl-PL")}</>}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => toggleCode(c)}>
+                    {c.is_active ? "Wyłącz" : "Włącz"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => deleteCode(c.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-2 mt-12 mb-6">
           <Package className="h-5 w-5 text-[color:var(--gold)]" />
           <h2 className="font-display text-3xl">Pakiety</h2>
         </div>
