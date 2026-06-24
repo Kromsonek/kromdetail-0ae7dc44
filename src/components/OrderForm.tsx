@@ -27,7 +27,7 @@ const schema = z.object({
 });
 
 export function OrderForm({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
-  const { items, total, clear } = useCart();
+  const { items, total, clear, appliedCode, codeDiscount } = useCart();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ customer_name: "", phone: "", email: "", car_make_model: "", location: "", preferred_date: "", notes: "" });
   const [date, setDate] = useState<Date | undefined>(undefined);
@@ -96,6 +96,19 @@ export function OrderForm({ open, onOpenChange }: { open: boolean; onOpenChange:
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
     if (items.length === 0) { toast.error("Koszyk jest pusty"); return; }
     setLoading(true);
+    // Zarejestruj użycie kodu rabatowego (jeśli zastosowany)
+    if (appliedCode) {
+      const { data: ok, error: rErr } = await (supabase as any).rpc("redeem_discount_code", { _code: appliedCode.code });
+      if (rErr || !ok) {
+        setLoading(false);
+        toast.error("Kod rabatowy jest już niedostępny. Usuń go z koszyka.");
+        return;
+      }
+    }
+    const notesWithCode = [
+      appliedCode ? `Kod rabatowy: ${appliedCode.code} (-${codeDiscount.toFixed(0)} zł)` : "",
+      parsed.data.notes || "",
+    ].filter(Boolean).join("\n");
     // Zapisz zamówienie do bazy, aby admin mógł je zatwierdzić i przyznać punkty
     const { error: insErr } = await supabase.from("orders").insert({
       customer_name: parsed.data.customer_name,
@@ -104,7 +117,7 @@ export function OrderForm({ open, onOpenChange }: { open: boolean; onOpenChange:
       car_make_model: parsed.data.car_make_model,
       location: parsed.data.location,
       preferred_date: parsed.data.preferred_date || null,
-      notes: parsed.data.notes || null,
+      notes: notesWithCode || null,
       items: items as any,
       total,
       status: "new",
