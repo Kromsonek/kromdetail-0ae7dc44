@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Trash2, LogOut, Tag, Award, ClipboardCheck, Check, X, Pencil, Package, Home, Wrench } from "lucide-react";
+import { Trash2, LogOut, Tag, Award, ClipboardCheck, Check, X, Pencil, Package, Home, Wrench, Ticket, Copy } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -30,6 +30,16 @@ type PkgFull = { id: string; name: string; description: string | null; price: nu
 type Svc = { id: string; name: string };
 type SvcFull = { id: string; name: string; description: string | null; price: number; sort_order: number };
 type Reward = { id: string; name: string; description: string | null; points_cost: number; image_url: string | null; is_active: boolean };
+type DiscountCode = {
+  id: string;
+  code: string;
+  discount_type: string;
+  discount_value: number;
+  max_uses: number | null;
+  uses_count: number;
+  is_active: boolean;
+  expires_at: string | null;
+};
 type Order = {
   id: string;
   customer_name: string;
@@ -60,6 +70,12 @@ function AdminPage() {
   const [editSvc, setEditSvc] = useState<SvcFull | null>(null);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [codes, setCodes] = useState<DiscountCode[]>([]);
+  const [dcType, setDcType] = useState<"percent" | "amount">("percent");
+  const [dcValue, setDcValue] = useState<number>(10);
+  const [dcMaxUses, setDcMaxUses] = useState<string>("");
+  const [dcExpires, setDcExpires] = useState<string>("");
+  const [dcSaving, setDcSaving] = useState(false);
   const [editReward, setEditReward] = useState<Reward | null>(null);
   const [introTitle, setIntroTitle] = useState("");
   const [introBody, setIntroBody] = useState("");
@@ -99,7 +115,7 @@ function AdminPage() {
   }, []);
 
   const loadAll = async () => {
-    const [pkgs, pkgsFull, svcs, svcsFull, promos, rws, ords] = await Promise.all([
+    const [pkgs, pkgsFull, svcs, svcsFull, promos, rws, ords, dcs] = await Promise.all([
       supabase.from("packages").select("id,name").order("sort_order"),
       supabase.from("packages").select("*").order("sort_order"),
       supabase.from("services").select("id,name").order("sort_order"),
@@ -107,6 +123,7 @@ function AdminPage() {
       (supabase.from as any)("promotions").select("*").order("created_at", { ascending: false }),
       supabase.from("rewards").select("*").order("points_cost", { ascending: true }),
       supabase.from("orders").select("*").order("created_at", { ascending: false }),
+      (supabase.from as any)("discount_codes").select("*").order("created_at", { ascending: false }),
     ]);
     const { data: contentRows } = await supabase
       .from("site_content")
@@ -124,6 +141,7 @@ function AdminPage() {
     if (promos.data) setPromotions(promos.data as Promotion[]);
     if (rws.data) setRewards(rws.data as Reward[]);
     if (ords.data) setOrders(ords.data as Order[]);
+    if (dcs.data) setCodes(dcs.data as DiscountCode[]);
   };
 
   const targetOptions: { id: string; label: string }[] =
@@ -280,6 +298,52 @@ function AdminPage() {
     if (error) return toast.error(error.message);
     toast.success("Zamówienie usunięte");
     loadAll();
+  };
+
+  const genCode = () => {
+    const part = () => Math.floor(1000 + Math.random() * 9000).toString();
+    return `KROM-${part()}-${part()}-${part()}`;
+  };
+
+  const createDiscountCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (dcValue <= 0) return toast.error("Wartość musi być większa od 0");
+    if (dcType === "percent" && dcValue > 100) return toast.error("Procent max 100");
+    setDcSaving(true);
+    const code = genCode();
+    const { error } = await (supabase.from as any)("discount_codes").insert({
+      code,
+      discount_type: dcType,
+      discount_value: dcValue,
+      max_uses: dcMaxUses.trim() ? Number(dcMaxUses) : null,
+      expires_at: dcExpires ? new Date(dcExpires).toISOString() : null,
+      is_active: true,
+    });
+    setDcSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Kod ${code} utworzony`);
+    setDcMaxUses("");
+    setDcExpires("");
+    loadAll();
+  };
+
+  const toggleCode = async (c: DiscountCode) => {
+    const { error } = await (supabase.from as any)("discount_codes").update({ is_active: !c.is_active }).eq("id", c.id);
+    if (error) return toast.error(error.message);
+    loadAll();
+  };
+
+  const deleteCode = async (id: string) => {
+    if (!confirm("Usunąć ten kod?")) return;
+    const { error } = await (supabase.from as any)("discount_codes").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Kod usunięty");
+    loadAll();
+  };
+
+  const copyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success("Skopiowano " + code);
   };
 
   const logout = async () => {
