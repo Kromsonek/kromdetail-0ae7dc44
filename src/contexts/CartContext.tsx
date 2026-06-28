@@ -65,7 +65,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const { validateDiscountCodeFn } = await import("@/lib/discount-codes.functions");
       const row = await validateDiscountCodeFn({ data: { code: trimmed } });
       if (!row || !row.valid) return { ok: false, message: row?.message || "Kod nieprawidłowy" };
-      setAppliedCode({ code: trimmed, discount_type: row.discount_type!, discount_value: Number(row.discount_value) });
+      setAppliedCode({ code: trimmed, discount_type: row.discount_type as "percent" | "amount", discount_value: Number(row.discount_value) });
       return { ok: true, message: "Kod zastosowany" };
     } catch (e: any) {
       return { ok: false, message: e?.message || "Błąd walidacji kodu" };
