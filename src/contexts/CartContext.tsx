@@ -61,12 +61,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const applyCode = async (code: string) => {
     const trimmed = code.trim().toUpperCase();
     if (!trimmed) return { ok: false, message: "Wpisz kod" };
-    const { data, error } = await (supabase as any).rpc("validate_discount_code", { _code: trimmed });
-    if (error) return { ok: false, message: error.message };
-    const row = Array.isArray(data) ? data[0] : data;
-    if (!row || !row.valid) return { ok: false, message: row?.message || "Kod nieprawidłowy" };
-    setAppliedCode({ code: trimmed, discount_type: row.discount_type, discount_value: Number(row.discount_value) });
-    return { ok: true, message: "Kod zastosowany" };
+    try {
+      const { validateDiscountCodeFn } = await import("@/lib/discount-codes.functions");
+      const row = await validateDiscountCodeFn({ data: { code: trimmed } });
+      if (!row || !row.valid) return { ok: false, message: row?.message || "Kod nieprawidłowy" };
+      setAppliedCode({ code: trimmed, discount_type: row.discount_type!, discount_value: Number(row.discount_value) });
+      return { ok: true, message: "Kod zastosowany" };
+    } catch (e: any) {
+      return { ok: false, message: e?.message || "Błąd walidacji kodu" };
+    }
   };
   const clearCode = () => setAppliedCode(null);
 
