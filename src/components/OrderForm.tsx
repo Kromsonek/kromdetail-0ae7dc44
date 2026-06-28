@@ -98,8 +98,15 @@ export function OrderForm({ open, onOpenChange }: { open: boolean; onOpenChange:
     setLoading(true);
     // Zarejestruj użycie kodu rabatowego (jeśli zastosowany)
     if (appliedCode) {
-      const { data: ok, error: rErr } = await (supabase as any).rpc("redeem_discount_code", { _code: appliedCode.code });
-      if (rErr || !ok) {
+      try {
+        const { redeemDiscountCodeFn } = await import("@/lib/discount-codes.functions");
+        const ok = await redeemDiscountCodeFn({ data: { code: appliedCode.code } });
+        if (!ok) {
+          setLoading(false);
+          toast.error("Kod rabatowy jest już niedostępny. Usuń go z koszyka.");
+          return;
+        }
+      } catch {
         setLoading(false);
         toast.error("Kod rabatowy jest już niedostępny. Usuń go z koszyka.");
         return;
