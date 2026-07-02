@@ -62,8 +62,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const trimmed = code.trim().toUpperCase();
     if (!trimmed) return { ok: false, message: "Wpisz kod" };
     try {
-      const { validateDiscountCodeFn } = await import("@/lib/discount-codes.functions");
-      const row = await validateDiscountCodeFn({ data: { code: trimmed } });
+      const { data, error } = await supabase.rpc("validate_discount_code", { _code: trimmed });
+      if (error) return { ok: false, message: error.message };
+      const row = Array.isArray(data) ? data[0] : data;
       if (!row || !row.valid) return { ok: false, message: row?.message || "Kod nieprawidłowy" };
       setAppliedCode({ code: trimmed, discount_type: row.discount_type as "percent" | "amount", discount_value: Number(row.discount_value) });
       return { ok: true, message: "Kod zastosowany" };
